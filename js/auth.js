@@ -4,6 +4,10 @@
   const homePages = Object.freeze({ admin: 'admin.html', employee: 'employee.html' });
   const pageCompanyId = window.HCMStorage.getActiveCompanyId();
   const pageUserId = window.HCMStorage.getSession()?.currentUserId;
+  function pageUrl(target) {
+    const atRoot = document.documentElement.dataset.page === 'index.html' || !document.documentElement.dataset.roles;
+    return /^index\.html(?:[?#]|$)/.test(target) ? `${atRoot ? '' : '../'}${target}` : `${atRoot ? 'pages/' : ''}${target}`;
+  }
 
   function getCurrentUser() {
     if (!window.HCMStorage.getCompany()) return null;
@@ -24,13 +28,13 @@
   }
 
   function getHomePage(role) {
-    return homePages[role] || 'index.html';
+    return pageUrl(homePages[role] || 'index.html');
   }
 
   function guardPage(roles) {
     const user = getCurrentUser();
     if (!user) {
-      window.location.replace('index.html');
+      window.location.replace(pageUrl('index.html'));
       return false;
     }
     if (!hasRole(roles)) {
@@ -42,13 +46,13 @@
 
   function signOut() {
     window.HCMStorage.clearSession();
-    window.location.replace('index.html');
+    window.location.replace(pageUrl('index.html'));
   }
 
   function switchAccount(role) {
     if (!['admin', 'employee'].includes(role)) throw new Error('Choose Admin or Employee login.');
     window.HCMStorage.clearSession();
-    window.location.replace(`index.html?view=${role}`);
+    window.location.replace(pageUrl(`index.html?view=${role}`));
   }
 
   function requireRole(roles) {
@@ -117,7 +121,7 @@
     });
   }
 
-  window.HCMAuth = Object.freeze({ getCurrentUser, hasRole, getHomePage, guardPage, signOut, switchAccount, requireRole, setup, createCompany, renameCompany, deleteCompany, login });
+  window.HCMAuth = Object.freeze({ getCurrentUser, hasRole, getHomePage, pageUrl, guardPage, signOut, switchAccount, requireRole, setup, createCompany, renameCompany, deleteCompany, login });
 
   // Runs in the head before protected content can become visible.
   const roles = document.documentElement.dataset.roles;

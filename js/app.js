@@ -36,6 +36,7 @@
     for (const [name, value] of Object.entries(attrs)) {
       if (value === undefined || value === null || value === false) continue;
       if (name === 'class') node.className = value;
+      else if (name === 'href' && /^[a-z][a-z0-9-]*\.html(?:[?#]|$)/i.test(value)) node.setAttribute(name, A.pageUrl(value));
       else if (name === 'text') node.textContent = value;
       else if (name.startsWith('on')) node.addEventListener(name.slice(2).toLowerCase(), value);
       else if (name === 'value') node.value = value;
@@ -56,7 +57,7 @@
   }
   function brand(linked = true) {
     return el(linked ? 'a' : 'div', { class: 'brand', href: linked ? 'index.html' : undefined, 'aria-label': linked ? 'Huma home' : 'Huma' },
-      el('img', { class: 'brand-mark', src: '../assets/huma-logo.svg', width: 36, height: 36, alt: '', 'aria-hidden': 'true' }), el('span', { class: 'brand-wordmark' }, 'huma'));
+      el('img', { class: 'brand-mark', src: `${page === 'index.html' ? '' : '../'}assets/huma-logo.svg`, width: 36, height: 36, alt: '', 'aria-hidden': 'true' }), el('span', { class: 'brand-wordmark' }, 'huma'));
   }
   function button(text, action, variant = 'primary', iconName) {
     return el('button', { type: 'button', class: `button button-${variant}`, onClick: action }, iconName && icon(iconName), text);

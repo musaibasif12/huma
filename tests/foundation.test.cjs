@@ -45,18 +45,18 @@ function withSession(role, allowedRoles) {
   return env;
 }
 
-test('Exactly seven HTML pages in pages/ with valid local assets and links', () => {
+test('Root index and six protected HTML pages have valid local assets and links', () => {
   const pagesRoot = path.join(root, 'pages');
-  assert.equal(fs.readdirSync(root).filter((name) => name.endsWith('.html')).length, 0);
+  assert.deepEqual(fs.readdirSync(root).filter((name) => name.endsWith('.html')), ['index.html']);
   const pages = fs.readdirSync(pagesRoot).filter((name) => name.endsWith('.html')).sort();
-  assert.deepEqual(pages, ['admin.html', 'employee.html', 'employees.html', 'index.html', 'leaves.html', 'payslip.html', 'settings.html']);
-  for (const page of pages) {
-    const html = source(`pages/${page}`);
+  assert.deepEqual(pages, ['admin.html', 'employee.html', 'employees.html', 'leaves.html', 'payslip.html', 'settings.html']);
+  for (const page of ['index.html', ...pages.map((name) => `pages/${name}`)]) {
+    const html = source(page);
     assert.match(html, /<meta name="viewport"/);
     assert.match(html, /<main\b/);
     assert.doesNotMatch(html, /\son\w+=/);
     for (const [, target] of html.matchAll(/(?:src|href)="([^"#]+)"/g)) {
-      assert.ok(fs.existsSync(path.resolve(pagesRoot, target)), `${page}: ${target} exists`);
+      assert.ok(fs.existsSync(path.resolve(root, path.dirname(page), target)), `${page}: ${target} exists`);
     }
     if (page !== 'index.html') {
       assert.match(html, /data-auth="pending"/);
@@ -68,6 +68,20 @@ test('Exactly seven HTML pages in pages/ with valid local assets and links', () 
 
 test('All application JavaScript parses', () => {
   for (const file of fs.readdirSync(path.join(root, 'js'))) new vm.Script(source(`js/${file}`));
+});
+test('Page URLs route correctly between the root entry and pages directory', () => {
+  const env = environment(); env.auth();
+  const auth = env.window.HCMAuth;
+  assert.equal(auth.getHomePage('admin'), 'pages/admin.html');
+  assert.equal(auth.getHomePage('employee'), 'pages/employee.html');
+  assert.equal(auth.pageUrl('index.html?view=companies'), 'index.html?view=companies');
+  assert.equal(auth.pageUrl('settings.html'), 'pages/settings.html');
+  env.document.documentElement.dataset.roles = 'employee';
+  env.document.documentElement.dataset.page = 'employee.html';
+  assert.equal(auth.getHomePage('employee'), 'employee.html');
+  assert.equal(auth.pageUrl('index.html?view=employee'), '../index.html?view=employee');
+  assert.equal(auth.pageUrl('payslip.html?month=2026-10'), 'payslip.html?month=2026-10');
+  assert.equal(auth.pageUrl('employee.html#leave-balance'), 'employee.html#leave-balance');
 });
 
 test('Missing storage returns safe defaults without writing or seeding', () => {
@@ -91,7 +105,7 @@ test('Malformed JSON and invalid shapes fail closed and preserve stored bytes', 
   assert.equal(env.window.HCMStorage.getLeaves().length, 0);
   assert.equal(env.window.HCMStorage.getCompany(), null);
   env.auth();
-  assert.deepEqual(env.redirects, ['index.html']);
+  assert.deepEqual(env.redirects, ['../index.html']);
   assert.equal(env.writes, 0);
   assert.ok([...env.data.values()].every((value) => value === '{broken'));
   env.data.set('hcm_users', JSON.stringify([null]));
@@ -109,7 +123,7 @@ test('Unavailable storage reads safely; failed writes surface actionable errors'
   assert.throws(() => env.window.HCMStorage.setCompany(company), /Could not save/);
   assert.throws(() => env.window.HCMStorage.clearSession(), /Could not remove/);
   env.auth();
-  assert.deepEqual(env.redirects, ['index.html']);
+  assert.deepEqual(env.redirects, ['../index.html']);
 });
 
 test('Invalid writes and unknown keys are rejected', () => {
@@ -141,7 +155,7 @@ test('All protected pages redirect when there is no valid session', () => {
   for (const roles of ['admin', 'employee', 'admin,employee']) {
     const env = environment(roles);
     env.auth();
-    assert.deepEqual(env.redirects, ['index.html']);
+    assert.deepEqual(env.redirects, ['../index.html']);
     assert.equal(env.document.documentElement.dataset.auth, 'pending');
     assert.equal(env.writes, 0);
   }
@@ -173,7 +187,7 @@ test('Forged role, deleted user, duplicate ID, and missing company invalidate se
     mutation(env);
     assert.equal(env.window.HCMAuth.getCurrentUser(), null);
     assert.equal(env.window.HCMAuth.guardPage('admin'), false);
-    assert.deepEqual(env.redirects, ['index.html']);
+    assert.deepEqual(env.redirects, ['../index.html']);
   }
 });
 
@@ -183,7 +197,7 @@ test('Signing out removes only the session', () => {
   assert.equal(env.window.HCMStorage.getSession(), null);
   assert.equal(env.window.HCMStorage.getCompany().name, company.name);
   assert.equal(env.window.HCMStorage.getUsers().length, 2);
-  assert.deepEqual(env.redirects, ['index.html']);
+  assert.deepEqual(env.redirects, ['../index.html']);
 });
 
 console.log(`\n${checks} foundation checks passed. No browser data was created.`);

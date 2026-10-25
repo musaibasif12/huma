@@ -1,5 +1,12 @@
 # Browser QA and repeatable acceptance checks
 
+## Root index with application pages in pages/
+
+- Moved only `index.html` back to the project root. The six protected pages remain in `pages/`. Root index assets use `css/`, `js/`, and `assets/`; protected-page assets still use `../`.
+- Centralized context-aware page URLs so root login/company links open `pages/*.html`, and protected-page home, account-switch, logout and company-management links return to `../index.html`. Page queries and section hashes remain intact.
+- Browser checks confirmed root company directory → Open workspace → `/pages/admin.html`, account switching to `/index.html?view=admin`, successful login back to `/pages/admin.html`, and Settings → Manage companies back to `/index.html?view=companies`. Logos loaded in both contexts, existing workspace data remained visible, and no warnings/errors were captured. The clean first-run preview also opened from root `index.html`.
+- All 83 automated checks pass: 13 foundation and 70 application checks, including root/subdirectory URL resolution, seven HTML locations, asset references, guards and workflows. This supersedes the earlier all-HTML-in-pages layout below.
+
 ## HTML directory organization
 
 - Moved all seven HTML files into `pages/`. Shared scripts, styles, and images remain in their existing root folders. Updated HTML asset references plus the rendered brand and downloadable payslip logo paths.
